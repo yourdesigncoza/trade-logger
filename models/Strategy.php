@@ -3,7 +3,12 @@ class Strategy {
     private $db;
     
     public function __construct() {
-        $this->db = new Database();
+        try {
+            $this->db = new Database();
+        } catch (Exception $e) {
+            error_log("Strategy Model: Database connection failed - " . $e->getMessage());
+            throw new Exception("Unable to connect to database");
+        }
     }
     
     public function create($user_id, $data) {
@@ -134,28 +139,44 @@ class Strategy {
     }
     
     public function getByUserId($user_id, $limit = null, $offset = 0) {
-        $sql = "SELECT s.*, COUNT(t.id) as trade_count 
-                FROM strategies s 
-                LEFT JOIN trades t ON s.id = t.strategy_id 
-                WHERE s.user_id = ? 
-                GROUP BY s.id 
-                ORDER BY s.created_at DESC";
-        
-        if ($limit) {
-            $sql .= " LIMIT ? OFFSET ?";
-            $params = [$user_id, $limit, $offset];
-        } else {
-            $params = [$user_id];
+        try {
+            $sql = "SELECT s.*, COUNT(t.id) as trade_count 
+                    FROM strategies s 
+                    LEFT JOIN trades t ON s.id = t.strategy_id 
+                    WHERE s.user_id = ? 
+                    GROUP BY s.id 
+                    ORDER BY s.created_at DESC";
+            
+            if ($limit) {
+                $sql .= " LIMIT ? OFFSET ?";
+                $params = [$user_id, $limit, $offset];
+            } else {
+                $params = [$user_id];
+            }
+            
+            $strategies = $this->db->fetchAll($sql, $params);
+            
+            if (!$strategies) {
+                error_log("Strategy Model: getByUserId returned null for user " . $user_id);
+                return [];
+            }
+            
+            foreach ($strategies as &$strategy) {
+                try {
+                    $strategy['timeframes'] = json_decode($strategy['timeframes'] ?? '[]', true) ?? [];
+                    $strategy['sessions'] = json_decode($strategy['sessions'] ?? '[]', true) ?? [];
+                } catch (Exception $e) {
+                    error_log("Strategy Model: JSON decode error for strategy " . $strategy['id'] . " - " . $e->getMessage());
+                    $strategy['timeframes'] = [];
+                    $strategy['sessions'] = [];
+                }
+            }
+            
+            return $strategies;
+        } catch (Exception $e) {
+            error_log("Strategy Model: Error in getByUserId - " . $e->getMessage());
+            return [];
         }
-        
-        $strategies = $this->db->fetchAll($sql, $params);
-        
-        foreach ($strategies as &$strategy) {
-            $strategy['timeframes'] = json_decode($strategy['timeframes'] ?? '[]', true);
-            $strategy['sessions'] = json_decode($strategy['sessions'] ?? '[]', true);
-        }
-        
-        return $strategies;
     }
     
     public function getConditions($strategy_id) {
@@ -238,8 +259,17 @@ class Strategy {
     }
     
     public function getUserStrategyCount($user_id) {
-        $count = $this->db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$user_id]);
-        return $count['count'];
+        try {
+            $count = $this->db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$user_id]);
+            if (!$count) {
+                error_log("Strategy Model: getUserStrategyCount returned null for user " . $user_id);
+                return 0;
+            }
+            return (int)$count['count'];
+        } catch (Exception $e) {
+            error_log("Strategy Model: Error in getUserStrategyCount - " . $e->getMessage());
+            return 0;
+        }
     }
     
     private function validateStrategyData($data) {

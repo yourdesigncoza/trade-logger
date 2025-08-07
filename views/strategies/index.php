@@ -1,25 +1,65 @@
 <?php
-require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../models/Strategy.php';
+// Enable error logging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/strategies_errors.log');
 
-requireLogin();
+try {
+    require_once __DIR__ . '/../../config/config.php';
+    require_once __DIR__ . '/../../models/Strategy.php';
+    require_once __DIR__ . '/../../includes/csrf.php';
 
-$current_user = getCurrentUser();
-$strategy_model = new Strategy();
+    requireLogin();
 
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per_page = 12;
-$offset = ($page - 1) * $per_page;
+    $current_user = getCurrentUser();
+    if (!$current_user) {
+        throw new Exception("Unable to get current user");
+    }
 
-$strategies = $strategy_model->getByUserId($_SESSION['user_id'], $per_page + 1, $offset);
-$has_more = count($strategies) > $per_page;
-if ($has_more) {
-    array_pop($strategies);
+    $strategy_model = new Strategy();
+
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $per_page = 12;
+    $offset = ($page - 1) * $per_page;
+
+    // Get strategies with error handling
+    $strategies = [];
+    $has_more = false;
+    $strategy_count = 0;
+    
+    try {
+        $strategies = $strategy_model->getByUserId($_SESSION['user_id'], $per_page + 1, $offset);
+        $has_more = count($strategies) > $per_page;
+        if ($has_more) {
+            array_pop($strategies);
+        }
+        
+        $strategy_count = $strategy_model->getUserStrategyCount($_SESSION['user_id']);
+        error_log("Strategies: Successfully loaded " . count($strategies) . " strategies for user " . $_SESSION['user_id']);
+    } catch (Exception $e) {
+        error_log("Strategies: Error loading strategies - " . $e->getMessage());
+        flashMessage('error', 'Unable to load strategies at this time.');
+        $strategies = [];
+        $strategy_count = 0;
+    }
+
+    $page_title = 'My Strategies - Trade Logger';
+    
+} catch (Exception $e) {
+    error_log("Strategies: Critical error - " . $e->getMessage());
+    
+    // Set fallback values
+    $strategies = [];
+    $strategy_count = 0;
+    $has_more = false;
+    $page = 1;
+    $current_user = ['strategy_limit' => DEFAULT_STRATEGY_LIMIT];
+    $page_title = 'My Strategies - Trade Logger';
+    
+    flashMessage('error', 'An error occurred while loading the strategies page.');
 }
 
-$strategy_count = $strategy_model->getUserStrategyCount($_SESSION['user_id']);
-
-$page_title = 'My Strategies - Trade Logger';
 include __DIR__ . '/../layouts/header.php';
 ?>
 
@@ -218,7 +258,20 @@ include __DIR__ . '/../layouts/header.php';
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="POST" action="<?= BASE_URL ?>/views/strategies/delete.php" style="display: inline;">
-                    <?= CSRF::getTokenField() ?>
+                    <?php 
+                    try {
+                        if (class_exists('CSRF')) {
+                            echo CSRF::getTokenField();
+                        } else {
+                            // Generate a simple token if CSRF class is not available
+                            $token = bin2hex(random_bytes(32));
+                            $_SESSION['csrf_token'] = $token;
+                            echo '<input type="hidden" name="csrf_token" value="' . $token . '">';
+                        }
+                    } catch (Exception $e) {
+                        error_log("Strategies: CSRF token error - " . $e->getMessage());
+                    }
+                    ?>
                     <input type="hidden" name="id" id="deleteStrategyId">
                     <button type="submit" class="btn btn-danger">Delete Strategy</button>
                 </form>

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../models/Strategy.php';
+require_once __DIR__ . '/../../includes/csrf.php';
 
 requireLogin();
 
@@ -17,7 +18,22 @@ $error = null;
 $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    CSRF::validateRequest();
+    try {
+        if (class_exists('CSRF')) {
+            CSRF::validateRequest();
+        } else {
+            // Simple CSRF validation if class is not available
+            if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || 
+                $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+                throw new Exception('Invalid CSRF token');
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Strategies Create: CSRF validation error - " . $e->getMessage());
+        $error = 'Security validation failed. Please try again.';
+    }
+    
+    if (!isset($error)) {
     
     try {
         $data = [
@@ -55,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
+    } // Close the if (!isset($error)) block
 }
 
 $timeframe_options = $strategy_model->getTimeframeOptions();
@@ -100,7 +117,20 @@ include __DIR__ . '/../layouts/header.php';
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data" data-validate novalidate>
-            <?= CSRF::getTokenField() ?>
+            <?php 
+            try {
+                if (class_exists('CSRF')) {
+                    echo CSRF::getTokenField();
+                } else {
+                    // Generate a simple token if CSRF class is not available
+                    $token = bin2hex(random_bytes(32));
+                    $_SESSION['csrf_token'] = $token;
+                    echo '<input type="hidden" name="csrf_token" value="' . $token . '">';
+                }
+            } catch (Exception $e) {
+                error_log("Strategies Create: CSRF token error - " . $e->getMessage());
+            }
+            ?>
             
             <div class="row">
                 <div class="col-12 col-lg-8">

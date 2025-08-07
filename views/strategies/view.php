@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../models/Strategy.php';
+require_once __DIR__ . '/../../includes/csrf.php';
 
 requireLogin();
 
@@ -314,7 +315,20 @@ include __DIR__ . '/../layouts/header.php';
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="POST" action="<?= BASE_URL ?>/views/strategies/delete.php" style="display: inline;">
-                    <?= CSRF::getTokenField() ?>
+                    <?php 
+                    try {
+                        if (class_exists('CSRF')) {
+                            echo CSRF::getTokenField();
+                        } else {
+                            // Generate a simple token if CSRF class is not available
+                            $token = bin2hex(random_bytes(32));
+                            $_SESSION['csrf_token'] = $token;
+                            echo '<input type="hidden" name="csrf_token" value="' . $token . '">';
+                        }
+                    } catch (Exception $e) {
+                        error_log("Strategies View: CSRF token error - " . $e->getMessage());
+                    }
+                    ?>
                     <input type="hidden" name="id" id="deleteStrategyId">
                     <button type="submit" class="btn btn-danger">Delete Strategy</button>
                 </form>
