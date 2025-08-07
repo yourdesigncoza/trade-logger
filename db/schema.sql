@@ -105,6 +105,6 @@ CREATE TABLE sessions (
     INDEX idx_last_activity (last_activity)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Create default admin user (password: Admin123!)
+-- Create default admin user (password: )
 INSERT INTO users (username, email, password_hash, email_verified, is_admin, strategy_limit) 
 VALUES ('admin', 'admin@tradelogger.local', '$2y$10$YourHashHere', TRUE, TRUE, 999);
