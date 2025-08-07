@@ -9,6 +9,7 @@ $current_user = getCurrentUser();
 $strategy_model = new Strategy();
 
 $strategy_count = $strategy_model->getUserStrategyCount($_SESSION['user_id']);
+$strategy_count = (int)$strategy_count;
 if ($strategy_count >= $current_user['strategy_limit']) {
     flashMessage('error', 'You have reached your strategy limit. Contact admin to increase your limit.');
     redirect('/views/strategies/');
@@ -91,7 +92,7 @@ include __DIR__ . '/../layouts/header.php';
                         <div class="col">
                             <h3 class="page-header-title">Create New Strategy</h3>
                             <p class="page-header-text mb-0">
-                                Define your trading strategy (<?= $strategy_count + 1 ?>/<?= $current_user['strategy_limit'] ?>)
+                                Define your trading strategy (<?= (int)$strategy_count + 1 ?>/<?= (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT) ?>)
                             </p>
                         </div>
                         <div class="col-auto">
