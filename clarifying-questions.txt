@@ -1,0 +1,76 @@
+Clarifying Questions:
+
+  1. Database & Authentication:
+
+  - Should passwords use password_hash() with bcrypt?
+  Yes
+  - Do you want email verification for registration?
+  Yes
+  - Should there be a "forgot password" feature?
+  Yes
+  - Any session timeout requirements?
+  No
+
+  2. Strategy Module:
+
+  - For timeframes field - should this be a single value or multiple (e.g., "5m,15m,1h")?
+  Multiple
+  - For sessions - same question, single or multiple sessions per strategy?
+  Multiple
+  - What file types/size limits for chart image uploads?
+  4MB
+  - Should strategy conditions have an order/priority field?
+  No
+
+  3. Trade Logging:
+
+  - Should RRR be calculated automatically from Entry/SL/TP or manually entered?
+  No, manual entry
+  - Do you want trade screenshots/charts attached to individual trades?
+  Yes
+  - Should there be trade status options beyond Win/Loss/Break-even (e.g., "Open", "Cancelled")?
+  Yes
+  - Any validation rules for price entries (e.g., SL must be below entry for longs)?
+  Yes
+
+  4. Dashboard & Analytics:
+
+  - For "Monthly P/L" - how should this be calculated without position sizes/dollar amounts?
+  % gain
+  - Should equity curve use RRR units or require users to input account size?
+  Input account size
+  - Any specific date format preferences?
+  2025/07/08
+  - Export functionality needed (CSV, PDF)?
+  Both
+
+  5. Technical Decisions:
+
+  - PDO or MySQLi preference?
+  PDO
+  - Any specific Bootstrap theme/template in mind?
+  Phoenix https://prium.github.io/phoenix/v1.22.0/index.html 
+  - Chart.js confirmed over Google Charts?
+  Chart.js
+  - Any existing database/tables to integrate with?
+  No
+
+  6. User Experience:
+
+  - Should strategies be deletable or just archived?
+  Deleted
+  - Can users edit trades after logging?
+  Yes ( helpfull when backtesting )
+  - Default sorting for trade lists (newest first)?
+  Newest first
+  - Any notification system needed?
+  No
+
+  7. Admin Features:
+
+  - How should admin access be granted (special flag in users table)?
+  Yes
+  - Any other admin capabilities beyond strategy limit adjustment?
+  Not at the moment
+  - User blocking/suspension needed?
+  Just User delete

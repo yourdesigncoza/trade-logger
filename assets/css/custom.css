@@ -1,0 +1,237 @@
+/* Trade Logger Custom Styles */
+
+/* Logo and Branding */
+.logo-text {
+    font-weight: 600;
+    color: var(--phoenix-primary);
+}
+
+/* Cards and Components */
+.strategy-card {
+    border: 1px solid var(--phoenix-gray-300);
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.strategy-card:hover {
+    box-shadow: 0 4px 15px rgba(56, 116, 255, 0.15);
+    border-color: var(--phoenix-primary);
+}
+
+.trade-status-win {
+    background-color: var(--phoenix-success);
+    color: white;
+}
+
+.trade-status-loss {
+    background-color: var(--phoenix-danger);
+    color: white;
+}
+
+.trade-status-break-even {
+    background-color: var(--phoenix-warning);
+    color: white;
+}
+
+.trade-status-open {
+    background-color: var(--phoenix-info);
+    color: white;
+}
+
+.trade-status-cancelled {
+    background-color: var(--phoenix-gray-500);
+    color: white;
+}
+
+/* Form Styling */
+.form-floating-phoenix > label {
+    color: var(--phoenix-gray-600);
+}
+
+.form-control:focus {
+    border-color: var(--phoenix-primary);
+    box-shadow: 0 0 0 0.25rem rgba(56, 116, 255, 0.15);
+}
+
+/* Dashboard Stats Cards */
+.stat-card {
+    background: linear-gradient(135deg, var(--phoenix-primary) 0%, rgba(56, 116, 255, 0.8) 100%);
+    color: white;
+    border: none;
+}
+
+.stat-card.success {
+    background: linear-gradient(135deg, var(--phoenix-success) 0%, rgba(37, 176, 3, 0.8) 100%);
+}
+
+.stat-card.danger {
+    background: linear-gradient(135deg, var(--phoenix-danger) 0%, rgba(250, 59, 29, 0.8) 100%);
+}
+
+.stat-card.warning {
+    background: linear-gradient(135deg, var(--phoenix-warning) 0%, rgba(229, 120, 11, 0.8) 100%);
+}
+
+/* Chart Containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 1rem 0;
+}
+
+.chart-container.large {
+    height: 400px;
+}
+
+/* File Upload Styling */
+.upload-zone {
+    border: 2px dashed var(--phoenix-gray-400);
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+    border-color: var(--phoenix-primary);
+    background-color: rgba(56, 116, 255, 0.05);
+}
+
+.upload-zone.dragover {
+    border-color: var(--phoenix-primary);
+    background-color: rgba(56, 116, 255, 0.1);
+}
+
+/* Strategy Conditions */
+.condition-item {
+    background-color: var(--phoenix-gray-100);
+    border: 1px solid var(--phoenix-gray-300);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.condition-item .btn-remove {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.condition-type-entry {
+    border-left: 4px solid var(--phoenix-success);
+}
+
+.condition-type-exit {
+    border-left: 4px solid var(--phoenix-danger);
+}
+
+.condition-type-invalidation {
+    border-left: 4px solid var(--phoenix-warning);
+}
+
+/* Trade Journal Table */
+.trade-table {
+    font-size: 0.875rem;
+}
+
+.trade-table th {
+    background-color: var(--phoenix-gray-100);
+    border-color: var(--phoenix-gray-300);
+    font-weight: 600;
+}
+
+.trade-table td {
+    vertical-align: middle;
+}
+
+.trade-direction-long {
+    color: var(--phoenix-success);
+    font-weight: 600;
+}
+
+.trade-direction-short {
+    color: var(--phoenix-danger);
+    font-weight: 600;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 250px;
+    }
+    
+    .trade-table {
+        font-size: 0.75rem;
+    }
+    
+    .stat-card .h3 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Loading States */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading::after {
+    content: "Loading...";
+    font-size: 0.875rem;
+    color: var(--phoenix-gray-600);
+}
+
+/* Filter Form */
+.filter-form {
+    background-color: var(--phoenix-gray-50);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Badges */
+.badge-phoenix-outline {
+    border: 1px solid currentColor;
+    background-color: transparent;
+}
+
+/* Strategy Limit Warning */
+.strategy-limit-warning {
+    background-color: rgba(229, 120, 11, 0.1);
+    border: 1px solid var(--phoenix-warning);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    color: var(--phoenix-warning);
+}
+
+/* Success/Error Messages */
+.alert-phoenix {
+    border-radius: 0.5rem;
+    border: none;
+    font-weight: 500;
+}
+
+/* Navigation Active State */
+.navbar-nav .nav-link.active {
+    background-color: rgba(56, 116, 255, 0.1);
+    color: var(--phoenix-primary);
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link.active .nav-link-icon {
+    color: var(--phoenix-primary);
+}
