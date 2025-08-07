@@ -1,21 +1,69 @@
 <?php
 require_once __DIR__ . '/config/config.php';
 
-requireLogin();
+// Enable error logging for development
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/logs/dashboard_errors.log');
 
-$current_user = getCurrentUser();
-$page_title = 'Dashboard - Trade Logger';
+// Create logs directory if it doesn't exist
+if (!file_exists(__DIR__ . '/logs')) {
+    mkdir(__DIR__ . '/logs', 0755, true);
+}
 
-// Get basic stats
-$total_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ?", [$_SESSION['user_id']]);
-$total_strategies = $db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$_SESSION['user_id']]);
+try {
+    requireLogin();
 
-$winning_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ? AND outcome = 'Win'", [$_SESSION['user_id']]);
-$losing_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ? AND outcome = 'Loss'", [$_SESSION['user_id']]);
+    $current_user = getCurrentUser();
+    $page_title = 'Dashboard - Trade Logger';
 
-$win_rate = 0;
-if ($total_trades['count'] > 0) {
-    $win_rate = ($winning_trades['count'] / $total_trades['count']) * 100;
+    // Get basic stats with error handling
+    $total_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ?", [$_SESSION['user_id']]);
+    if (!$total_trades) {
+        error_log("Dashboard: Failed to fetch total trades for user ID: " . $_SESSION['user_id']);
+        $total_trades = ['count' => 0];
+    }
+
+    $total_strategies = $db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$_SESSION['user_id']]);
+    if (!$total_strategies) {
+        error_log("Dashboard: Failed to fetch total strategies for user ID: " . $_SESSION['user_id']);
+        $total_strategies = ['count' => 0];
+    }
+
+    $winning_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ? AND outcome = 'Win'", [$_SESSION['user_id']]);
+    if (!$winning_trades) {
+        error_log("Dashboard: Failed to fetch winning trades for user ID: " . $_SESSION['user_id']);
+        $winning_trades = ['count' => 0];
+    }
+
+    $losing_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ? AND outcome = 'Loss'", [$_SESSION['user_id']]);
+    if (!$losing_trades) {
+        error_log("Dashboard: Failed to fetch losing trades for user ID: " . $_SESSION['user_id']);
+        $losing_trades = ['count' => 0];
+    }
+
+    $win_rate = 0;
+    if ($total_trades['count'] > 0) {
+        $win_rate = ($winning_trades['count'] / $total_trades['count']) * 100;
+    }
+
+    error_log("Dashboard: Successfully loaded stats for user ID: " . $_SESSION['user_id'] . " - Trades: " . $total_trades['count'] . ", Win Rate: " . number_format($win_rate, 2) . "%");
+
+} catch (Exception $e) {
+    error_log("Dashboard Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+    flashMessage('error', 'An error occurred while loading the dashboard. Please try again.');
+    
+    // Set default values to prevent page crash
+    $total_trades = ['count' => 0];
+    $total_strategies = ['count' => 0];
+    $winning_trades = ['count' => 0];
+    $losing_trades = ['count' => 0];
+    $win_rate = 0;
+    
+    if (!$current_user) {
+        $current_user = ['username' => 'User', 'strategy_limit' => 0, 'account_size' => 0];
+    }
 }
 
 include __DIR__ . '/views/layouts/header.php';
@@ -150,15 +198,25 @@ include __DIR__ . '/views/layouts/header.php';
                     </div>
                     <div class="card-body">
                         <?php
-                        $recent_trades = $db->fetchAll(
-                            "SELECT t.*, s.name as strategy_name 
-                             FROM trades t 
-                             LEFT JOIN strategies s ON t.strategy_id = s.id 
-                             WHERE t.user_id = ? 
-                             ORDER BY t.created_at DESC 
-                             LIMIT 5",
-                            [$_SESSION['user_id']]
-                        );
+                        try {
+                            $recent_trades = $db->fetchAll(
+                                "SELECT t.*, s.name as strategy_name 
+                                 FROM trades t 
+                                 LEFT JOIN strategies s ON t.strategy_id = s.id 
+                                 WHERE t.user_id = ? 
+                                 ORDER BY t.created_at DESC 
+                                 LIMIT 5",
+                                [$_SESSION['user_id']]
+                            );
+                            if (!$recent_trades) {
+                                $recent_trades = [];
+                                error_log("Dashboard: No recent trades found for user ID: " . $_SESSION['user_id']);
+                            }
+                        } catch (Exception $e) {
+                            error_log("Dashboard: Error fetching recent trades - " . $e->getMessage());
+                            $recent_trades = [];
+                            flashMessage('warning', 'Could not load recent trades at this time.');
+                        }
                         ?>
 
                         <?php if (empty($recent_trades)): ?>
@@ -230,15 +288,25 @@ include __DIR__ . '/views/layouts/header.php';
                     </div>
                     <div class="card-body">
                         <?php
-                        $strategies = $db->fetchAll(
-                            "SELECT s.*, COUNT(t.id) as trade_count 
-                             FROM strategies s 
-                             LEFT JOIN trades t ON s.id = t.strategy_id 
-                             WHERE s.user_id = ? 
-                             GROUP BY s.id 
-                             ORDER BY s.created_at DESC",
-                            [$_SESSION['user_id']]
-                        );
+                        try {
+                            $strategies = $db->fetchAll(
+                                "SELECT s.*, COUNT(t.id) as trade_count 
+                                 FROM strategies s 
+                                 LEFT JOIN trades t ON s.id = t.strategy_id 
+                                 WHERE s.user_id = ? 
+                                 GROUP BY s.id 
+                                 ORDER BY s.created_at DESC",
+                                [$_SESSION['user_id']]
+                            );
+                            if (!$strategies) {
+                                $strategies = [];
+                                error_log("Dashboard: No strategies found for user ID: " . $_SESSION['user_id']);
+                            }
+                        } catch (Exception $e) {
+                            error_log("Dashboard: Error fetching strategies - " . $e->getMessage());
+                            $strategies = [];
+                            flashMessage('warning', 'Could not load strategies at this time.');
+                        }
                         ?>
 
                         <?php if (empty($strategies)): ?>

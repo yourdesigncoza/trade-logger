@@ -1,10 +1,26 @@
+<?php
+// Enable error logging for header
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', dirname(dirname(__DIR__)) . '/logs/header_errors.log');
+
+// Create logs directory if it doesn't exist
+$logs_dir = dirname(dirname(__DIR__)) . '/logs';
+if (!file_exists($logs_dir)) {
+    mkdir($logs_dir, 0755, true);
+}
+
+// Log header loading
+error_log("Header: Loading header for page: " . ($page_title ?? 'Unknown'));
+?>
 <!DOCTYPE html>
 <html lang="en" dir="ltr" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= $page_title ?? 'Trade Logger' ?></title>
+    <title><?= sanitize($page_title ?? 'Trade Logger') ?></title>
     
     <!-- Favicons -->
     <link rel="apple-touch-icon" sizes="180x180" href="<?= BASE_URL ?>/assets/img/favicons/apple-touch-icon.png">
@@ -42,15 +58,25 @@
         
         <div class="content">
             <?php 
-            $flash_messages = getFlashMessages();
-            if (!empty($flash_messages)): 
+            try {
+                $flash_messages = getFlashMessages();
+                if (!empty($flash_messages)): 
+                    error_log("Header: Displaying " . count($flash_messages) . " flash message(s)");
+                ?>
+                    <div class="container-fluid">
+                        <?php foreach ($flash_messages as $flash): ?>
+                            <?php if (isset($flash['type']) && isset($flash['message'])): ?>
+                                <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : sanitize($flash['type']) ?> alert-dismissible fade show" role="alert">
+                                    <?= sanitize($flash['message']) ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            <?php else: ?>
+                                <?php error_log("Header: Invalid flash message structure: " . json_encode($flash)); ?>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; 
+            } catch (Exception $e) {
+                error_log("Header: Error displaying flash messages - " . $e->getMessage());
+            }
             ?>
-                <div class="container-fluid">
-                    <?php foreach ($flash_messages as $flash): ?>
-                        <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show" role="alert">
-                            <?= sanitize($flash['message']) ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>

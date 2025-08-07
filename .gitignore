@@ -1,1 +1,23 @@
 legacy/*
+
+# Logs and runtime files
+logs/
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+
+# Upload directories (keep structure but ignore contents)
+uploads/*
+!uploads/.gitkeep
