@@ -71,12 +71,38 @@ function isLoggedIn() {
 function getCurrentUser() {
     if (!isLoggedIn()) return null;
     
-    $db = new Database();
-    return $db->fetch(
-        "SELECT id, username, email, is_admin, strategy_limit, account_size FROM users WHERE id = ?", 
-        [$_SESSION['user_id']]
-    );
+    try {
+        $db = new Database();
+        $user = $db->fetch(
+            "SELECT id, username, email, is_admin, strategy_limit, account_size FROM users WHERE id = ?", 
+            [$_SESSION['user_id']]
+        );
+        
+        if (!$user) {
+            error_log("getCurrentUser: User not found for ID: " . $_SESSION['user_id']);
+            return null;
+        }
+        
+        return $user;
+    } catch (Exception $e) {
+        error_log("getCurrentUser Error: " . $e->getMessage());
+        // Return a fallback user object to prevent crashes
+        return [
+            'id' => $_SESSION['user_id'] ?? 0,
+            'username' => 'User',
+            'email' => '',
+            'is_admin' => false,
+            'strategy_limit' => DEFAULT_STRATEGY_LIMIT,
+            'account_size' => 0
+        ];
+    }
 }
 
-$db = new Database();
+try {
+    $db = new Database();
+} catch (Exception $e) {
+    error_log("Failed to initialize global database connection: " . $e->getMessage());
+    // Create a dummy database object to prevent crashes
+    $db = null;
+}
 ?>

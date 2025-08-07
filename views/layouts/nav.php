@@ -1,6 +1,24 @@
 <?php 
-$current_user = getCurrentUser();
-$current_page = basename($_SERVER['PHP_SELF']);
+try {
+    $current_user = getCurrentUser();
+    $current_page = basename($_SERVER['PHP_SELF']);
+    
+    // Ensure current_user has required fields
+    if (!$current_user || !is_array($current_user)) {
+        error_log("Nav: getCurrentUser returned null or invalid data");
+        $current_user = [
+            'username' => 'User',
+            'is_admin' => false
+        ];
+    }
+} catch (Exception $e) {
+    error_log("Nav Error: " . $e->getMessage());
+    $current_user = [
+        'username' => 'User', 
+        'is_admin' => false
+    ];
+    $current_page = basename($_SERVER['PHP_SELF']);
+}
 ?>
 
 <nav class="navbar navbar-vertical navbar-expand-lg">
@@ -32,11 +50,19 @@ $current_page = basename($_SERVER['PHP_SELF']);
                                 <span class="nav-link-text-wrapper">
                                     <span class="nav-link-text">Strategies</span>
                                     <?php 
-                                    $strategy_count = $db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$_SESSION['user_id']]);
-                                    if ($strategy_count['count'] > 0): 
+                                    try {
+                                        if ($db && isset($_SESSION['user_id'])) {
+                                            $strategy_count = $db->fetch("SELECT COUNT(*) as count FROM strategies WHERE user_id = ?", [$_SESSION['user_id']]);
+                                            if ($strategy_count && $strategy_count['count'] > 0): 
+                                            ?>
+                                                <span class="badge badge-phoenix badge-phoenix-primary ms-2"><?= $strategy_count['count'] ?></span>
+                                            <?php 
+                                            endif;
+                                        }
+                                    } catch (Exception $e) {
+                                        error_log("Nav: Error fetching strategy count - " . $e->getMessage());
+                                    }
                                     ?>
-                                        <span class="badge badge-phoenix badge-phoenix-primary ms-2"><?= $strategy_count['count'] ?></span>
-                                    <?php endif; ?>
                                 </span>
                             </div>
                         </a>
@@ -143,7 +169,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                                 <div class="avatar avatar-xl">
                                     <img class="rounded-circle" src="<?= BASE_URL ?>/assets/img/team/72x72/57.webp" alt="Profile">
                                 </div>
-                                <h6 class="mt-2 text-body"><?= sanitize($current_user['username']) ?></h6>
+                                <h6 class="mt-2 text-body"><?= sanitize($current_user['username'] ?? 'User') ?></h6>
                             </div>
                         </div>
                         <div class="overflow-auto scrollbar">

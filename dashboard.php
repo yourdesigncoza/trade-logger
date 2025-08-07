@@ -18,6 +18,11 @@ try {
     $current_user = getCurrentUser();
     $page_title = 'Dashboard - Trade Logger';
 
+    // Check if database is available before querying
+    if (!$db) {
+        throw new Exception("Database connection not available");
+    }
+
     // Get basic stats with error handling
     $total_trades = $db->fetch("SELECT COUNT(*) as count FROM trades WHERE user_id = ?", [$_SESSION['user_id']]);
     if (!$total_trades) {
@@ -61,7 +66,8 @@ try {
     $losing_trades = ['count' => 0];
     $win_rate = 0;
     
-    if (!$current_user) {
+    // Ensure $current_user is always defined
+    if (!isset($current_user) || !$current_user) {
         $current_user = ['username' => 'User', 'strategy_limit' => 0, 'account_size' => 0];
     }
 }
