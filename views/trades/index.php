@@ -1,48 +1,99 @@
 <?php
-require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../models/Trade.php';
-require_once __DIR__ . '/../../models/Strategy.php';
+// Enable error logging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/trades_errors.log');
 
-requireLogin();
+try {
+    require_once __DIR__ . '/../../config/config.php';
+    require_once __DIR__ . '/../../models/Trade.php';
+    require_once __DIR__ . '/../../models/Strategy.php';
 
-$trade_model = new Trade();
-$strategy_model = new Strategy();
+    requireLogin();
 
-// Get filter parameters
-$filters = [
-    'strategy_id' => (int)($_GET['strategy_id'] ?? 0) ?: null,
-    'instrument' => sanitize($_GET['instrument'] ?? ''),
-    'session' => sanitize($_GET['session'] ?? ''),
-    'direction' => sanitize($_GET['direction'] ?? ''),
-    'outcome' => sanitize($_GET['outcome'] ?? ''),
-    'status' => sanitize($_GET['status'] ?? ''),
-    'date_from' => sanitize($_GET['date_from'] ?? ''),
-    'date_to' => sanitize($_GET['date_to'] ?? ''),
-    'sort' => sanitize($_GET['sort'] ?? 'date'),
-    'sort_dir' => sanitize($_GET['sort_dir'] ?? 'desc')
-];
+    $trade_model = new Trade();
+    $strategy_model = new Strategy();
 
-// Pagination
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per_page = 20;
-$offset = ($page - 1) * $per_page;
+    // Get filter parameters
+    $filters = [
+        'strategy_id' => (int)($_GET['strategy_id'] ?? 0) ?: null,
+        'instrument' => sanitize($_GET['instrument'] ?? ''),
+        'session' => sanitize($_GET['session'] ?? ''),
+        'direction' => sanitize($_GET['direction'] ?? ''),
+        'outcome' => sanitize($_GET['outcome'] ?? ''),
+        'status' => sanitize($_GET['status'] ?? ''),
+        'date_from' => sanitize($_GET['date_from'] ?? ''),
+        'date_to' => sanitize($_GET['date_to'] ?? ''),
+        'sort' => sanitize($_GET['sort'] ?? 'date'),
+        'sort_dir' => sanitize($_GET['sort_dir'] ?? 'desc')
+    ];
 
-// Get trades and stats
-$trades = $trade_model->getByUserId($_SESSION['user_id'], $filters, $per_page + 1, $offset);
-$has_more = count($trades) > $per_page;
-if ($has_more) {
-    array_pop($trades);
+    // Pagination
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $per_page = 20;
+    $offset = ($page - 1) * $per_page;
+
+    // Get trades and stats with error handling
+    $trades = [];
+    $stats = ['total_trades' => 0, 'win_rate' => 0];
+    $strategies = [];
+    $instruments = [];
+    $has_more = false;
+
+    try {
+        $trades = $trade_model->getByUserId($_SESSION['user_id'], $filters, $per_page + 1, $offset);
+        $has_more = count($trades) > $per_page;
+        if ($has_more) {
+            array_pop($trades);
+        }
+
+        $stats = $trade_model->getTradeStats($_SESSION['user_id'], $filters);
+        $strategies = $strategy_model->getByUserId($_SESSION['user_id']);
+        $instruments = $trade_model->getUserInstruments($_SESSION['user_id']);
+        
+        error_log("Trades: Successfully loaded " . count($trades) . " trades for user " . $_SESSION['user_id']);
+    } catch (Exception $e) {
+        error_log("Trades: Error loading trades - " . $e->getMessage());
+        flashMessage('error', 'Unable to load trades at this time.');
+        $trades = [];
+        $stats = ['total_trades' => 0, 'win_rate' => 0];
+        $strategies = [];
+        $instruments = [];
+    }
+
+} catch (Exception $e) {
+    error_log("Trades: Critical error - " . $e->getMessage());
+    
+    // Set fallback values
+    $trades = [];
+    $stats = ['total_trades' => 0, 'win_rate' => 0];
+    $strategies = [];
+    $instruments = [];
+    $filters = [];
+    $has_more = false;
+    $page = 1;
+    
+    flashMessage('error', 'An error occurred while loading the trades page.');
 }
 
-$stats = $trade_model->getTradeStats($_SESSION['user_id'], $filters);
-
-// Get filter options
-$user_strategies = $strategy_model->getStrategyOptions($_SESSION['user_id']);
-$user_instruments = $trade_model->getUserInstruments($_SESSION['user_id']);
-$session_options = $trade_model->getSessionOptions();
-$outcome_options = $trade_model->getOutcomeOptions();
-$status_options = $trade_model->getStatusOptions();
-$direction_options = $trade_model->getDirectionOptions();
+// Get filter options with error handling
+try {
+    $user_strategies = isset($strategy_model) ? $strategy_model->getStrategyOptions($_SESSION['user_id']) : [];
+    $user_instruments = isset($trade_model) ? $trade_model->getUserInstruments($_SESSION['user_id']) : [];
+    $session_options = isset($trade_model) ? $trade_model->getSessionOptions() : [];
+    $outcome_options = isset($trade_model) ? $trade_model->getOutcomeOptions() : [];
+    $status_options = isset($trade_model) ? $trade_model->getStatusOptions() : [];
+    $direction_options = isset($trade_model) ? $trade_model->getDirectionOptions() : [];
+} catch (Exception $e) {
+    error_log("Trades: Error loading filter options - " . $e->getMessage());
+    $user_strategies = [];
+    $user_instruments = [];
+    $session_options = [];
+    $outcome_options = [];
+    $status_options = [];
+    $direction_options = [];
+}
 
 $page_title = 'Trade Journal - Trade Logger';
 include __DIR__ . '/../layouts/header.php';

@@ -1,21 +1,57 @@
 <?php
-require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../models/Trade.php';
-require_once __DIR__ . '/../../models/Strategy.php';
+// Enable error logging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/trades_create_errors.log');
 
-requireLogin();
+try {
+    require_once __DIR__ . '/../../config/config.php';
+    require_once __DIR__ . '/../../models/Trade.php';
+    require_once __DIR__ . '/../../models/Strategy.php';
+    require_once __DIR__ . '/../../includes/csrf.php';
 
-$trade_model = new Trade();
-$strategy_model = new Strategy();
+    requireLogin();
 
-$error = null;
-$success = null;
+    $trade_model = new Trade();
+    $strategy_model = new Strategy();
 
-// Get strategy from URL if provided
-$preselected_strategy = (int)($_GET['strategy_id'] ?? 0);
+    $error = null;
+    $success = null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    CSRF::validateRequest();
+    // Get strategy from URL if provided
+    $preselected_strategy = (int)($_GET['strategy_id'] ?? 0);
+
+} catch (Exception $e) {
+    error_log("Trades Create: Critical initialization error - " . $e->getMessage());
+    
+    // Set fallback values
+    $trade_model = null;
+    $strategy_model = null;
+    $error = 'Unable to initialize the trade creation system. Please try again later.';
+    $success = null;
+    $preselected_strategy = 0;
+    
+    flashMessage('error', $error);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $trade_model && $strategy_model) {
+    try {
+        if (class_exists('CSRF')) {
+            CSRF::validateRequest();
+        } else {
+            // Simple CSRF validation if class is not available
+            if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || 
+                $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+                throw new Exception('Invalid CSRF token');
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Trades Create: CSRF validation error - " . $e->getMessage());
+        $error = 'Security validation failed. Please try again.';
+    }
+    
+    if (!isset($error)) {
     
     try {
         $data = [
@@ -51,15 +87,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
+    } // Close the if (!isset($error)) block
 }
 
-// Get form options
-$user_strategies = $strategy_model->getStrategyOptions($_SESSION['user_id']);
-$session_options = $trade_model->getSessionOptions();
-$outcome_options = $trade_model->getOutcomeOptions();
-$status_options = $trade_model->getStatusOptions();
-$direction_options = $trade_model->getDirectionOptions();
-$instrument_options = $strategy_model->getInstrumentOptions();
+// Get form options with error handling
+try {
+    $user_strategies = isset($strategy_model) ? $strategy_model->getStrategyOptions($_SESSION['user_id']) : [];
+} catch (Exception $e) {
+    error_log("Trades Create: Error getting strategy options - " . $e->getMessage());
+    $user_strategies = [];
+}
+
+try {
+    $session_options = isset($trade_model) ? $trade_model->getSessionOptions() : [];
+    $outcome_options = isset($trade_model) ? $trade_model->getOutcomeOptions() : [];
+    $status_options = isset($trade_model) ? $trade_model->getStatusOptions() : [];
+    $direction_options = isset($trade_model) ? $trade_model->getDirectionOptions() : [];
+} catch (Exception $e) {
+    error_log("Trades Create: Error getting trade options - " . $e->getMessage());
+    $session_options = [];
+    $outcome_options = [];
+    $status_options = [];
+    $direction_options = [];
+}
+
+try {
+    $instrument_options = isset($strategy_model) ? $strategy_model->getInstrumentOptions() : [];
+} catch (Exception $e) {
+    error_log("Trades Create: Error getting instrument options - " . $e->getMessage());
+    $instrument_options = [];
+}
 
 $page_title = 'Log New Trade - Trade Logger';
 include __DIR__ . '/../layouts/header.php';
@@ -98,7 +155,20 @@ include __DIR__ . '/../layouts/header.php';
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data" data-validate novalidate>
-            <?= CSRF::getTokenField() ?>
+            <?php 
+            try {
+                if (class_exists('CSRF')) {
+                    echo CSRF::getTokenField();
+                } else {
+                    // Generate a simple token if CSRF class is not available
+                    $token = bin2hex(random_bytes(32));
+                    $_SESSION['csrf_token'] = $token;
+                    echo '<input type="hidden" name="csrf_token" value="' . $token . '">';
+                }
+            } catch (Exception $e) {
+                error_log("Trades Create: CSRF token error - " . $e->getMessage());
+            }
+            ?>
             
             <div class="row">
                 <div class="col-12 col-lg-8">

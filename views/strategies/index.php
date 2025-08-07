@@ -36,7 +36,11 @@ try {
         }
         
         $strategy_count = $strategy_model->getUserStrategyCount($_SESSION['user_id']);
-        error_log("Strategies: Successfully loaded " . count($strategies) . " strategies for user " . $_SESSION['user_id']);
+        
+        // Ensure strategy_count is always an integer
+        $strategy_count = (int)$strategy_count;
+        
+        error_log("Strategies: Successfully loaded " . count($strategies) . " strategies for user " . $_SESSION['user_id'] . ", count: " . $strategy_count);
     } catch (Exception $e) {
         error_log("Strategies: Error loading strategies - " . $e->getMessage());
         flashMessage('error', 'Unable to load strategies at this time.');
@@ -72,11 +76,11 @@ include __DIR__ . '/../layouts/header.php';
                         <div class="col">
                             <h3 class="page-header-title">My Trading Strategies</h3>
                             <p class="page-header-text mb-0">
-                                Manage your trading strategies (<?= $strategy_count ?>/<?= $current_user['strategy_limit'] ?> used)
+                                Manage your trading strategies (<?= (int)$strategy_count ?>/<?= (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT) ?> used)
                             </p>
                         </div>
                         <div class="col-auto">
-                            <?php if ($strategy_count < $current_user['strategy_limit']): ?>
+                            <?php if ((int)$strategy_count < (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT)): ?>
                                 <a href="<?= BASE_URL ?>/views/strategies/create.php" class="btn btn-primary">
                                     <span class="fas fa-plus me-2"></span>Create Strategy
                                 </a>
@@ -92,7 +96,7 @@ include __DIR__ . '/../layouts/header.php';
             </div>
         </div>
 
-        <?php if ($strategy_count >= $current_user['strategy_limit']): ?>
+        <?php if ((int)$strategy_count >= (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT)): ?>
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="strategy-limit-warning">
@@ -100,7 +104,7 @@ include __DIR__ . '/../layouts/header.php';
                             <span class="fas fa-exclamation-triangle me-2"></span>
                             <div>
                                 <strong>Strategy Limit Reached</strong>
-                                <p class="mb-0">You have reached your limit of <?= $current_user['strategy_limit'] ?> strategies. Contact an administrator to increase your limit.</p>
+                                <p class="mb-0">You have reached your limit of <?= (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT) ?> strategies. Contact an administrator to increase your limit.</p>
                             </div>
                         </div>
                     </div>
@@ -118,7 +122,7 @@ include __DIR__ . '/../layouts/header.php';
                             </div>
                             <h4 class="text-body-tertiary">No strategies yet</h4>
                             <p class="text-body-tertiary mb-4">Create your first trading strategy to get started</p>
-                            <?php if ($strategy_count < $current_user['strategy_limit']): ?>
+                            <?php if ((int)$strategy_count < (int)($current_user['strategy_limit'] ?? DEFAULT_STRATEGY_LIMIT)): ?>
                                 <a href="<?= BASE_URL ?>/views/strategies/create.php" class="btn btn-primary">
                                     <span class="fas fa-plus me-2"></span>Create Your First Strategy
                                 </a>

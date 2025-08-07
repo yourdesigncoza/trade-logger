@@ -3,7 +3,12 @@ class Trade {
     private $db;
     
     public function __construct() {
-        $this->db = new Database();
+        try {
+            $this->db = new Database();
+        } catch (Exception $e) {
+            error_log("Trade Model: Database connection failed - " . $e->getMessage());
+            throw new Exception("Unable to connect to database");
+        }
     }
     
     public function create($user_id, $data) {
@@ -194,7 +199,13 @@ class Trade {
             $params[] = $offset;
         }
         
-        return $this->db->fetchAll($sql, $params);
+        try {
+            $result = $this->db->fetchAll($sql, $params);
+            return $result ?? [];
+        } catch (Exception $e) {
+            error_log("Trade Model: Error in getByUserId - " . $e->getMessage());
+            return [];
+        }
     }
     
     public function getTradeStats($user_id, $filters = []) {
@@ -241,13 +252,39 @@ class Trade {
             $params[] = $filters['date_to'];
         }
         
-        $stats = $this->db->fetch($sql, $params);
-        
-        // Calculate win rate
-        $completed_trades = $stats['winning_trades'] + $stats['losing_trades'] + $stats['breakeven_trades'];
-        $stats['win_rate'] = $completed_trades > 0 ? ($stats['winning_trades'] / $completed_trades) * 100 : 0;
-        
-        return $stats;
+        try {
+            $stats = $this->db->fetch($sql, $params);
+            
+            if (!$stats) {
+                error_log("Trade Model: getTradeStats returned null for user " . $user_id);
+                return [
+                    'total_trades' => 0,
+                    'winning_trades' => 0,
+                    'losing_trades' => 0,
+                    'breakeven_trades' => 0,
+                    'open_trades' => 0,
+                    'avg_rrr' => 0,
+                    'win_rate' => 0
+                ];
+            }
+            
+            // Calculate win rate
+            $completed_trades = $stats['winning_trades'] + $stats['losing_trades'] + $stats['breakeven_trades'];
+            $stats['win_rate'] = $completed_trades > 0 ? ($stats['winning_trades'] / $completed_trades) * 100 : 0;
+            
+            return $stats;
+        } catch (Exception $e) {
+            error_log("Trade Model: Error in getTradeStats - " . $e->getMessage());
+            return [
+                'total_trades' => 0,
+                'winning_trades' => 0,
+                'losing_trades' => 0,
+                'breakeven_trades' => 0,
+                'open_trades' => 0,
+                'avg_rrr' => 0,
+                'win_rate' => 0
+            ];
+        }
     }
     
     public function getMonthlyStats($user_id, $year = null) {
@@ -287,10 +324,16 @@ class Trade {
     }
     
     public function getUserInstruments($user_id) {
-        return $this->db->fetchAll(
-            "SELECT DISTINCT instrument FROM trades WHERE user_id = ? ORDER BY instrument",
-            [$user_id]
-        );
+        try {
+            $result = $this->db->fetchAll(
+                "SELECT DISTINCT instrument FROM trades WHERE user_id = ? ORDER BY instrument",
+                [$user_id]
+            );
+            return $result ?? [];
+        } catch (Exception $e) {
+            error_log("Trade Model: Error in getUserInstruments - " . $e->getMessage());
+            return [];
+        }
     }
     
     private function validateTradeData($data) {
